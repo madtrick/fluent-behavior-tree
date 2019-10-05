@@ -9,18 +9,18 @@ import ParentBehaviorTreeNodeInterface from "./ParentBehaviorTreeNodeInterface";
  *
  * @property {string} name - The name of the node.
  */
-export default class SequenceNode implements ParentBehaviorTreeNodeInterface {
+export default class SequenceNode<T> implements ParentBehaviorTreeNodeInterface<T> {
     /**
      * List of child nodes.
      *
      * @type {BehaviorTreeNodeInterface[]}
      */
-    private children: BehaviorTreeNodeInterface[] = [];
+    private children: Array<BehaviorTreeNodeInterface<T>> = [];
 
     /**
      * Enumerator to keep state
      */
-    private enumerator?: NodeEnumerator;
+    private enumerator?: NodeEnumerator<T>;
 
     public constructor(public readonly name: string, private readonly keepState: boolean = false) {
     }
@@ -29,7 +29,7 @@ export default class SequenceNode implements ParentBehaviorTreeNodeInterface {
         this.enumerator = new NodeEnumerator(this.children);
     }
 
-    public async tick(state: StateData): Promise<BehaviorTreeStatus> {
+    public tick(state: StateData<T>): BehaviorTreeStatus {
         if (!this.enumerator || !this.keepState) {
             this.init();
         }
@@ -39,7 +39,7 @@ export default class SequenceNode implements ParentBehaviorTreeNodeInterface {
         }
 
         do {
-            const status = await this.enumerator.current.tick(state);
+            const status = this.enumerator.current.tick(state);
             if (status !== BehaviorTreeStatus.Success) {
                 if (status === BehaviorTreeStatus.Failure) {
                     this.enumerator.reset();
@@ -54,7 +54,7 @@ export default class SequenceNode implements ParentBehaviorTreeNodeInterface {
         return BehaviorTreeStatus.Success;
     }
 
-    public addChild(child: BehaviorTreeNodeInterface): void {
+    public addChild(child: BehaviorTreeNodeInterface<T>): void {
         this.children.push(child);
     }
 }

@@ -1,19 +1,19 @@
 import BehaviorTreeNodeInterface from "./Node/BehaviorTreeNodeInterface";
 
-export default class NodeEnumerator implements Iterable<BehaviorTreeNodeInterface> {
+export default class NodeEnumerator<T> implements Iterable<BehaviorTreeNodeInterface<T>> {
     public currentIndex: number = 0;
 
-    public get current(): BehaviorTreeNodeInterface {
+    public get current(): BehaviorTreeNodeInterface<T> {
         return this.nodes[this.currentIndex];
     }
 
-    public constructor(public nodes: BehaviorTreeNodeInterface[]) {
+    public constructor(public nodes: Array<BehaviorTreeNodeInterface<T>>) {
         this.nodes = nodes;
     }
 
-    public [Symbol.iterator](): Iterator<BehaviorTreeNodeInterface> {
+    public [Symbol.iterator](): Iterator<BehaviorTreeNodeInterface<T>> {
         return {
-            next: (): IteratorResult<BehaviorTreeNodeInterface> => {
+            next: (): IteratorResult<BehaviorTreeNodeInterface<T>> => {
                 let result;
 
                 if (this.currentIndex < this.nodes.length) {

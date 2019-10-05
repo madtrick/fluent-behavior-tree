@@ -9,7 +9,7 @@ import ParallelNode from "../src/Node/ParallelNode";
 import SelectorNode from "../src/Node/SelectorNode";
 import Errors from "../src/Error/Errors";
 
-let testObject: BehaviorTreeBuilder;
+let testObject: BehaviorTreeBuilder<number>;
 
 function init(): void {
     testObject = new BehaviorTreeBuilder();
@@ -25,7 +25,7 @@ test("can't create a behavior tree with zero nodes", async (assert) => {
 test("can't create an unested action node", async (assert) => {
     init();
     const error = assert.throws(() => {
-        testObject.do("some-node-1", async () => BehaviorTreeStatus.Running).build();
+        testObject.do("some-node-1", () => BehaviorTreeStatus.Running).build();
     }, BehaviorTreeError);
     assert.is(error.message, Errors.UNNESTED_ACTION_NODE);
 });
@@ -35,19 +35,19 @@ test("can create inverter node", async (assert) => {
 
     const node = testObject
         .inverter("some-inverter")
-            .do("some-node", async () => BehaviorTreeStatus.Success)
+            .do("some-node", () => BehaviorTreeStatus.Success)
         .end()
         .build();
 
     assert.is(InverterNode, node.constructor);
-    assert.is(BehaviorTreeStatus.Failure, await node.tick(new StateData()));
+    assert.is(BehaviorTreeStatus.Failure, await node.tick(new StateData(null, 0)));
 });
 
 test("can't create an unbalanced behavior tree", async (assert) => {
     init();
 
     const error = assert.throws(() => {
-        testObject.inverter("some-inverter").do("some-node", async () => BehaviorTreeStatus.Success).build()
+        testObject.inverter("some-inverter").do("some-node", () => BehaviorTreeStatus.Success).build()
     }, BehaviorTreeError);
 
     assert.is(error.message, Errors.NO_NODES);
@@ -57,12 +57,12 @@ test("condition is syntactic sugar for do", async (assert) => {
     init();
     const node = testObject
         .inverter("some-inverter")
-        .condition("some-node", async () => true)
+        .condition("some-node", () => true)
         .end()
         .build();
 
     assert.is(InverterNode, node.constructor);
-    assert.is(BehaviorTreeStatus.Failure, await node.tick(new StateData()));
+    assert.is(BehaviorTreeStatus.Failure, node.tick(new StateData(null, 0)));
 });
 
 test("can invert an inverter", async (assert) => {
@@ -70,13 +70,13 @@ test("can invert an inverter", async (assert) => {
     const node = testObject
         .inverter("some-inverter")
         .inverter("some-inverter")
-        .do("some-node", async () => BehaviorTreeStatus.Success)
+        .do("some-node", () => BehaviorTreeStatus.Success)
         .end()
         .end()
         .build();
 
     assert.is(InverterNode, node.constructor);
-    assert.is(BehaviorTreeStatus.Success, await node.tick(new StateData()));
+    assert.is(BehaviorTreeStatus.Success, await node.tick(new StateData(null, 0)));
 });
 
 test("adding more than a single child to inverter throws exception", async (assert) => {
@@ -84,8 +84,8 @@ test("adding more than a single child to inverter throws exception", async (asse
     const error = assert.throws(() => {
         testObject
             .inverter("some-inverter")
-            .do("some-node", async () => BehaviorTreeStatus.Success)
-            .do("some-node", async () => BehaviorTreeStatus.Success)
+            .do("some-node", () => BehaviorTreeStatus.Success)
+            .do("some-node", () => BehaviorTreeStatus.Success)
             .end()
             .build();
     }, BehaviorTreeError);
@@ -98,12 +98,12 @@ test("can create a sequence", async (assert) => {
     let invokeCount = 0;
     const sequence  = testObject
         .sequence("some-sequence")
-            .do("some-action-1", async () => {
+            .do("some-action-1", () => {
                 ++invokeCount;
 
                 return BehaviorTreeStatus.Success;
             })
-            .do("some-action-2", async () => {
+            .do("some-action-2", () => {
                 ++invokeCount;
 
                 return BehaviorTreeStatus.Success;
@@ -112,7 +112,7 @@ test("can create a sequence", async (assert) => {
         .build();
 
     assert.is(SequenceNode, sequence.constructor);
-    assert.is(BehaviorTreeStatus.Success, await sequence.tick(new StateData()));
+    assert.is(BehaviorTreeStatus.Success, await sequence.tick(new StateData(null, 0)));
     assert.is(2, invokeCount);
 });
 
@@ -121,12 +121,12 @@ test("can create a parallel", async (assert) => {
     let invokeCount = 0;
     const parallel  = testObject
         .parallel("some-parallel", 2, 2)
-            .do("some-action-1", async () => {
+            .do("some-action-1", () => {
                 ++invokeCount;
 
                 return BehaviorTreeStatus.Success;
             })
-            .do("some-action-2", async () => {
+            .do("some-action-2", () => {
                 ++invokeCount;
 
                 return BehaviorTreeStatus.Success;
@@ -135,7 +135,7 @@ test("can create a parallel", async (assert) => {
         .build();
 
     assert.is(ParallelNode, parallel.constructor);
-    assert.is(BehaviorTreeStatus.Success, await parallel.tick(new StateData()));
+    assert.is(BehaviorTreeStatus.Success, await parallel.tick(new StateData(null, 0)));
     assert.is(2, invokeCount);
 });
 
@@ -144,12 +144,12 @@ test("can create a selector", async (assert) => {
     let invokeCount = 0;
     const selector  = testObject
         .selector("some-parallel")
-            .do("some-action-1", async () => {
+            .do("some-action-1", () => {
                 ++invokeCount;
 
                 return BehaviorTreeStatus.Failure;
             })
-            .do("some-action-2", async () => {
+            .do("some-action-2", () => {
                 ++invokeCount;
 
                 return BehaviorTreeStatus.Success;
@@ -158,7 +158,7 @@ test("can create a selector", async (assert) => {
         .build();
 
     assert.is(SelectorNode, selector.constructor);
-    assert.is(BehaviorTreeStatus.Success, await selector.tick(new StateData()));
+    assert.is(BehaviorTreeStatus.Success, selector.tick(new StateData(null, 0)));
     assert.is(2, invokeCount);
 });
 
@@ -167,7 +167,7 @@ test("can splice sub tree", async (assert) => {
     let invokeCount = 0;
     const spliced = testObject
         .sequence("spliced")
-            .do("test", async () => {
+            .do("test", () => {
                 ++invokeCount;
 
                 return BehaviorTreeStatus.Success
@@ -182,7 +182,7 @@ test("can splice sub tree", async (assert) => {
         .end()
         .build();
 
-    await tree.tick(new StateData);
+    await tree.tick(new StateData(null, 0));
 
     assert.is(2, invokeCount);
 });
@@ -192,7 +192,7 @@ test("splicing an unnested sub tree throws exception", async (assert) => {
     const error = assert.throws(() => {
         testObject.splice(
             testObject.sequence("spliced")
-                .do("test", async () => BehaviorTreeStatus.Success)
+                .do("test", () => BehaviorTreeStatus.Success)
                 .end()
                 .build()
         );

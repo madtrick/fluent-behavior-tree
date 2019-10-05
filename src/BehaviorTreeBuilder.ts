@@ -11,18 +11,19 @@ import SelectorNode from "./Node/SelectorNode";
 import SequenceNode from "./Node/SequenceNode";
 import StateData from "./StateData";
 
-export default class BehaviorTreeBuilder {
+export default class BehaviorTreeBuilder<T> {
     /**
      * Last node created
      */
-    private curNode?: BehaviorTreeNodeInterface;
+    private curNode?: BehaviorTreeNodeInterface<T>;
 
     /**
      * Stack node nodes that we are build via the fluent API.
      *
      * @type {Stack<ParentBehaviorTreeNodeInterface>}
      */
-    private parentNodeStack: Stack<ParentBehaviorTreeNodeInterface> = new Stack<ParentBehaviorTreeNodeInterface>();
+    private parentNodeStack: Stack<ParentBehaviorTreeNodeInterface<T>> =
+        new Stack<ParentBehaviorTreeNodeInterface<T>>();
 
     /**
      * Create an action node.
@@ -31,12 +32,12 @@ export default class BehaviorTreeBuilder {
      * @param {(state: StateData) => BehaviorTreeStatus} fn
      * @returns {BehaviorTreeBuilder}
      */
-    public do(name: string, fn: (state: StateData) => Promise<BehaviorTreeStatus>): BehaviorTreeBuilder {
+    public do(name: string, fn: (state: StateData<T>) => BehaviorTreeStatus): BehaviorTreeBuilder<T> {
         if (this.parentNodeStack.isEmpty()) {
             throw new BehaviorTreeError(Errors.UNNESTED_ACTION_NODE);
         }
 
-        const actionNode = new ActionNode(name, fn);
+        const actionNode = new ActionNode<T>(name, fn);
         this.parentNodeStack.peek().addChild(actionNode);
 
         return this;
@@ -49,8 +50,8 @@ export default class BehaviorTreeBuilder {
      * @param {(state: StateData) => boolean} fn
      * @returns {BehaviorTreeBuilder}
      */
-    public condition(name: string, fn: (state: StateData) => Promise<boolean>): BehaviorTreeBuilder {
-        return this.do(name, async (t) => await fn(t) ? BehaviorTreeStatus.Success : BehaviorTreeStatus.Failure);
+    public condition(name: string, fn: (state: StateData<T>) => boolean): BehaviorTreeBuilder<T> {
+        return this.do(name, (t) => fn(t) ? BehaviorTreeStatus.Success : BehaviorTreeStatus.Failure);
     }
 
     /**
@@ -59,7 +60,7 @@ export default class BehaviorTreeBuilder {
      * @param {string} name
      * @returns {BehaviorTreeBuilder}
      */
-    public inverter(name: string): BehaviorTreeBuilder {
+    public inverter(name: string): BehaviorTreeBuilder<T> {
         return this.addParentNode(new InverterNode(name));
     }
 
@@ -70,7 +71,7 @@ export default class BehaviorTreeBuilder {
      * @param {boolean} keepState
      * @returns {BehaviorTreeBuilder}
      */
-    public sequence(name: string, keepState: boolean = true): BehaviorTreeBuilder {
+    public sequence(name: string, keepState: boolean = true): BehaviorTreeBuilder<T> {
         return this.addParentNode(new SequenceNode(name, keepState));
     }
 
@@ -82,7 +83,7 @@ export default class BehaviorTreeBuilder {
      * @param {number} requiredToSucceed
      * @returns {BehaviorTreeBuilder}
      */
-    public parallel(name: string, requiredToFail: number, requiredToSucceed: number): BehaviorTreeBuilder {
+    public parallel(name: string, requiredToFail: number, requiredToSucceed: number): BehaviorTreeBuilder<T> {
         return this.addParentNode(new ParallelNode(name, requiredToFail, requiredToSucceed));
     }
 
@@ -93,7 +94,7 @@ export default class BehaviorTreeBuilder {
      * @param {boolean} keepState
      * @returns {BehaviorTreeBuilder}
      */
-    public selector(name: string, keepState: boolean = true): BehaviorTreeBuilder {
+    public selector(name: string, keepState: boolean = true): BehaviorTreeBuilder<T> {
         return this.addParentNode(new SelectorNode(name, keepState));
     }
 
@@ -103,7 +104,7 @@ export default class BehaviorTreeBuilder {
      * @param {BehaviorTreeNodeInterface} subTree
      * @returns {BehaviorTreeBuilder}
      */
-    public splice(subTree: BehaviorTreeNodeInterface): BehaviorTreeBuilder {
+    public splice(subTree: BehaviorTreeNodeInterface<T>): BehaviorTreeBuilder<T> {
         if (this.parentNodeStack.isEmpty()) {
             throw new BehaviorTreeError(Errors.SPLICE_UNNESTED_TREE);
         }
@@ -117,7 +118,7 @@ export default class BehaviorTreeBuilder {
      * Build the actual tree
      * @returns {BehaviorTreeNodeInterface}
      */
-    public build(): BehaviorTreeNodeInterface {
+    public build(): BehaviorTreeNodeInterface<T> {
             if (!this.curNode) {
                 throw new BehaviorTreeError(Errors.NO_NODES);
             }
@@ -130,7 +131,7 @@ export default class BehaviorTreeBuilder {
      *
      * @returns {BehaviorTreeBuilder}
      */
-    public end(): BehaviorTreeBuilder {
+    public end(): BehaviorTreeBuilder<T> {
         this.curNode = this.parentNodeStack.pop();
 
         return this;
@@ -142,7 +143,7 @@ export default class BehaviorTreeBuilder {
      * @param {ParentBehaviorTreeNodeInterface} node
      * @returns {BehaviorTreeBuilder}
      */
-    private addParentNode(node: ParentBehaviorTreeNodeInterface): BehaviorTreeBuilder {
+    private addParentNode(node: ParentBehaviorTreeNodeInterface<T>): BehaviorTreeBuilder<T> {
         if (!this.parentNodeStack.isEmpty()) {
             this.parentNodeStack.peek().addChild(node);
         }

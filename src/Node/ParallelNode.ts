@@ -10,13 +10,13 @@ import ParentBehaviorTreeNodeInterface from "./ParentBehaviorTreeNodeInterface";
  * @property {number} requiredToFail    - Number of child failures required to terminate with failure.
  * @property {number} requiredToSucceed - Number of child successes required to terminate with success.
  */
-export default class ParallelNode implements ParentBehaviorTreeNodeInterface {
+export default class ParallelNode<T> implements ParentBehaviorTreeNodeInterface<T> {
     /**
      * List of child nodes.
      *
      * @type {BehaviorTreeNodeInterface[]}
      */
-    private children: BehaviorTreeNodeInterface[] = [];
+    private children: Array<BehaviorTreeNodeInterface<T>> = [];
 
     public constructor(
         public readonly name: string,
@@ -25,8 +25,8 @@ export default class ParallelNode implements ParentBehaviorTreeNodeInterface {
     ) {
     }
 
-    public async tick(state: StateData): Promise<BehaviorTreeStatus> {
-        const statuses: BehaviorTreeStatus[] = await Promise.all(this.children.map((c) => this.tickChildren(state, c)));
+    public tick(state: StateData<T>): BehaviorTreeStatus {
+        const statuses: BehaviorTreeStatus[] = this.children.map((c) => this.tickChildren(state, c));
         const succeeded                      = statuses.filter((x) => x === BehaviorTreeStatus.Success).length;
         const failed                         = statuses.filter((x) => x === BehaviorTreeStatus.Failure).length;
 
@@ -40,13 +40,13 @@ export default class ParallelNode implements ParentBehaviorTreeNodeInterface {
         return BehaviorTreeStatus.Running;
     }
 
-    public addChild(child: BehaviorTreeNodeInterface): void {
+    public addChild(child: BehaviorTreeNodeInterface<T>): void {
         this.children.push(child);
     }
 
-    private async tickChildren(state: StateData, child: BehaviorTreeNodeInterface): Promise<BehaviorTreeStatus> {
+    private tickChildren(state: StateData<T>, child: BehaviorTreeNodeInterface<T>): BehaviorTreeStatus {
         try {
-            return await child.tick(state);
+            return child.tick(state);
         } catch (e) {
             return BehaviorTreeStatus.Failure;
         }

@@ -10,21 +10,21 @@ import ParentBehaviorTreeNodeInterface from "./ParentBehaviorTreeNodeInterface";
  *
  * @property {string} name - The name of the node
  */
-export default class InverterNode implements ParentBehaviorTreeNodeInterface {
+export default class InverterNode<T> implements ParentBehaviorTreeNodeInterface<T> {
     /**
      * The child to be inverted
      */
-    private childNode?: BehaviorTreeNodeInterface;
+    private childNode?: BehaviorTreeNodeInterface<T>;
 
     public constructor(public readonly name: string) {
     }
 
-    public async tick(state: StateData): Promise<BehaviorTreeStatus> {
+    public tick(state: StateData<T>): BehaviorTreeStatus {
         if (!this.childNode) {
             throw new BehaviorTreeError(Errors.INVERTER_NO_CHILDREN);
         }
 
-        const result = await this.childNode.tick(state);
+        const result = this.childNode.tick(state);
         if (result === BehaviorTreeStatus.Failure) {
             return BehaviorTreeStatus.Success;
         } else if (result === BehaviorTreeStatus.Success) {
@@ -34,7 +34,7 @@ export default class InverterNode implements ParentBehaviorTreeNodeInterface {
         return result;
     }
 
-    public addChild(child: BehaviorTreeNodeInterface): void {
+    public addChild(child: BehaviorTreeNodeInterface<T>): void {
         if (!!this.childNode) {
             throw new BehaviorTreeError(Errors.INVERTER_MULTIPLE_CHILDREN);
         }
