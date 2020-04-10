@@ -13,6 +13,7 @@
         "compile": "npm run lint && tsc -p ./",
         "precommit": "npm run compile",
         "prepublishOnly": "npm run compile",
+        "prepare": "npm run compile",
         "lint": "tslint -c tslint.json 'src/**/*.ts' --exclude 'src/**/*.d.ts' --fix",
         "watch": "nodemon -e ts -w src --exec 'npm run compile'"
     },
